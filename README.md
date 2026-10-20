@@ -39,4 +39,29 @@ For each selected stock, the program will collect data relating to:
 This data will be stored using `SQLite`, after the data has been cleaned.
 
 
-### Data Analysis & Visualization Plan
+### Data Analysis and Visualization Plan
+
+Once stock data has been collected and stored, our tool will use **pandas** and **NumPy** to analyze it and **Matplotlib** (with **Plotly** for interactive charts) to visualize the results. The goal is to turn raw daily price data into clear metrics and charts that help a user understand how a stock has performed and how it compares to others.
+
+#### Data Preparation
+- Load stored price data (Date, Open, High, Low, Close, Adjusted Close, Volume) into a pandas DataFrame indexed by date.
+- Clean the data by removing duplicate rows, handling missing values (e.g., market holidays) with forward-fill, and ensuring correct data types.
+- Let the user filter the data by ticker symbol and date range (e.g., 1 month, 6 months, 1 year, 5 years).
+
+#### Visualizations
+1. **Price History Line Chart:** closing price over time, with optional 20/50/200-day moving average overlays.
+2. **Candlestick Chart:** daily open, high, low, and close prices (interactive, using Plotly).
+3. **Volume Bar Chart:** daily trading volume displayed beneath the price chart.
+4. **Cumulative Return Comparison:** multiple stocks plotted on one chart to compare performance over the same period.
+5. **Daily Returns Histogram:** the distribution of daily returns, showing how volatile a stock is.
+6. **Correlation Heatmap:** a color-coded matrix showing how strongly selected stocks move together.
+7. **RSI Chart:** RSI plotted over time with reference lines at 30 (oversold) and 70 (overbought).
+
+#### Output to the User
+- Key metrics will be displayed in a summary table alongside the charts in the interface.
+- Users will be able to choose which stocks, time range, and indicators to display.
+- Charts can be saved as PNG files, and analysis results can be exported to CSV.
+
+#### Limitations
+This tool analyzes **historical** data only and is intended for educational purposes. Past performance does not predict future results, and the tool does not provide investment advice.
+
