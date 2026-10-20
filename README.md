@@ -5,11 +5,7 @@
 - Jonah Wong
 
 ## Project Description
-Our app is a Flask web application that collects publicly available historical stock-market data from the web. 
-
-1. Home Page - Users will be able to visualize stock market data, with controls that allow users to customize a date-range. Users will also be able to view information about stock prices and trading volume. 
-
-2. Analysis Page - Our app will also analyze stock information, like price changes, returns, and daily averages. All this information will be visualized with graphs, tables, and charts.
+Our app is a Flask web application that collects publicly available historical stock-market data from the web. The purpose of our app is to provide an easy way for users to access historical stock data and to view in an easy to understand way. Our app will also be able to analyze the collected stock data. This analysis includes the analysis of price changes, daily returns, moving averages, and volatility for selected stocks. It will display the results using tables and visualizations such as price charts, volume charts, and return comparisons. 
 
 ## Project Outline/Plan
 
@@ -24,6 +20,12 @@ Our application will be created using Python and Flask. There will be at least t
 - drop downs
 - form buttons
 - navigation buttons
+
+There will be two main pages:
+
+1. Home Page - Users will be able to visualize stock market data, with controls that allow users to customize a date-range. Users will also be able to view information about stock prices and trading volume. 
+
+2. Analysis Page - Our app will also analyze stock information, like price changes, returns, and daily averages. All this information will be visualized with graphs, tables, and charts.
 
 ### Data Collection & Storage Plan
 Our program will utilize Yahoo Finance free plan via the `yfinance` Python package to retrieve 5 years of financial data, and more. To avoid being rate limited, our program will cache data locally and retrieve on a user defined interval or manually refreshed.
