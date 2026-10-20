@@ -28,6 +28,7 @@ There will be two main pages:
 2. Analysis Page - Our app will also analyze stock information, like price changes, returns, and daily averages. All this information will be visualized with graphs, tables, and charts.
 
 ### Data Collection & Storage Plan
+#### Written by Kelvin Phat
 Our program will utilize Yahoo Finance free plan via the `yfinance` Python package to retrieve 5 years of financial data, and more. To avoid being rate limited, our program will cache data locally and retrieve on a user defined interval or manually refreshed.
 
 For each selected stock, the program will collect data relating to:
@@ -42,6 +43,7 @@ This data will be stored using `SQLite`, after the data has been cleaned.
 
 
 ### Data Analysis and Visualization Plan
+#### Written by Jonah Wong
 
 Once stock data has been collected and stored, our tool will use **pandas** and **NumPy** to analyze it and **Matplotlib** (with **Plotly** for interactive charts) to visualize the results. The goal is to turn raw daily price data into clear metrics and charts that help a user understand how a stock has performed and how it compares to others.
 
