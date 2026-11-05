@@ -69,3 +69,16 @@ Once stock data has been collected and stored, our tool will use **pandas** and 
 #### Limitations
 This tool analyzes **historical** data only and is intended for educational purposes. Past performance does not predict future results, and the tool does not provide investment advice.
 
+# Project Setup
+
+## Environment Creation
+```bash
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+## Running the App
+```bash
+python run.py                   # serves at http://127.0.0.1:5000
+```
