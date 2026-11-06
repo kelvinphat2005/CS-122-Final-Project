@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template
+from . import data
+from . import analysis as an
 
 bp = Blueprint("main", __name__)
-
 
 @bp.route("/")
 def home():
