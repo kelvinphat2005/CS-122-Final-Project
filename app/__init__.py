@@ -8,6 +8,9 @@ def create_app():
     app.config["DATABASE"] = os.path.join(app.instance_path, "main.db")
     os.makedirs(app.instance_path, exist_ok=True) # create instance folder
 
+    # re-download a ticker automatically once its data is older than this
+    app.config["CACHE_MAX_AGE_HOURS"] = 24
+
     # db setup: auto close connections, create tables, add `flask init-db`
     from . import data
     data.init_app(app)

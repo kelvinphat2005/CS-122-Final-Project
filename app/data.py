@@ -3,7 +3,7 @@ fetch, clean, and commit data to db
 """
 
 import sqlite3
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import click
 import pandas as pd
@@ -25,7 +25,18 @@ CREATE TABLE IF NOT EXISTS prices (
     volume    INTEGER,
     PRIMARY KEY (ticker, date)
 );
+
+-- one row per ticker: when we last downloaded it, and how far back we have
+CREATE TABLE IF NOT EXISTS fetch_log (
+    ticker       TEXT PRIMARY KEY,
+    start_date   TEXT NOT NULL,   -- earliest date downloaded, YYYY-MM-DD
+    last_fetched TEXT NOT NULL    -- UTC timestamp, e.g. 2026-11-25T18:30:00+00:00
+);
 """
+
+# how old cached data can get before load_prices downloads it again.
+# override with app.config["CACHE_MAX_AGE_HOURS"].
+DEFAULT_CACHE_MAX_AGE_HOURS = 24
 
 
 def get_db():
@@ -77,15 +88,10 @@ def init_app(app):
         init_db()
 
 
-def fetch_prices(ticker, start=None, end=None):
+def resolve_dates(start=None, end=None):
     """
-    call yfinance to fetch daily prices for one ticker.
-
-    start/end are 'YYYY-MM-DD' strings or date objects. start defaults to
-    5 years ago, end defaults to today. end is inclusive here (yfinance's
-    own end is exclusive, so we add a day).
-
-    returns the raw yfinance DataFrame (may be empty if the ticker is invalid).
+    turn optional start/end ('YYYY-MM-DD' strings or date objects) into
+    date objects, filling in the defaults. returns (start, end).
     """
     # default end date: today
     if end:
@@ -98,6 +104,21 @@ def fetch_prices(ticker, start=None, end=None):
         start = pd.Timestamp(start).date()
     else:
         start = end - timedelta(days=5 * 365)
+
+    return start, end
+
+
+def fetch_prices(ticker, start=None, end=None):
+    """
+    call yfinance to fetch daily prices for one ticker.
+
+    start/end are 'YYYY-MM-DD' strings or date objects. start defaults to
+    5 years ago, end defaults to today. end is inclusive here (yfinance's
+    own end is exclusive, so we add a day).
+
+    returns the raw yfinance DataFrame (may be empty if the ticker is invalid).
+    """
+    start, end = resolve_dates(start, end)
 
     return yf.Ticker(ticker).history(
         start=start.isoformat(),
@@ -206,3 +227,100 @@ def update_prices(ticker, start=None, end=None):
     """
     raw = fetch_prices(ticker, start, end)
     return save_prices(ticker, clean_prices(raw))
+
+
+# caching - only fetch from yahoo if data is missing or old
+
+def get_fetch_log(ticker):
+    """
+    return {'start_date': date, 'last_fetched': datetime} for this ticker,
+    or None if it has never been downloaded.
+    """
+    row = get_db().execute(
+        "SELECT start_date, last_fetched FROM fetch_log WHERE ticker = ?",
+        (ticker.upper(),),
+    ).fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "start_date": date.fromisoformat(row[0]),
+        "last_fetched": datetime.fromisoformat(row[1]),
+    }
+
+
+def record_fetch(ticker, start_date):
+    """
+    remember that we just downloaded this ticker back to start_date.
+    the timestamp is stored in UTC so it doesn't depend on the computer's timezone.
+    """
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+    db = get_db()
+    db.execute(
+        "INSERT OR REPLACE INTO fetch_log (ticker, start_date, last_fetched) VALUES (?, ?, ?)",
+        (ticker.upper(), start_date.isoformat(), now),
+    )
+    db.commit()
+
+
+def is_stale(last_fetched):
+    """
+    True if last_fetched is older than the cache limit (CACHE_MAX_AGE_HOURS).
+    """
+    max_age_hours = current_app.config.get("CACHE_MAX_AGE_HOURS", DEFAULT_CACHE_MAX_AGE_HOURS)
+    age = datetime.now(timezone.utc) - last_fetched
+    return age > timedelta(hours=max_age_hours)
+
+
+def needs_fetch(log, start, force):
+    """
+    decide whether load_prices has to download. returns (True/False, reason).
+    """
+    if force:
+        return True, "manual refresh"
+
+    if log is None:
+        return True, "never downloaded"
+
+    if start < log["start_date"]:
+        return True, "requested dates go further back than what we have"
+
+    if is_stale(log["last_fetched"]):
+        return True, "cached data is too old"
+
+    return False, "cache is fresh"
+
+
+def load_prices(ticker, start=None, end=None, force=False):
+    """
+    the main function routes should call. returns the same DataFrame as
+    get_prices, but downloads from Yahoo Finance first if needed:
+      - the ticker has never been downloaded
+      - the requested start date is earlier than what's stored
+      - the last download is older than CACHE_MAX_AGE_HOURS
+      - force=True (e.g. the user clicked Refresh)
+    otherwise it reads straight from the database.
+    """
+    start, end = resolve_dates(start, end)
+    log = get_fetch_log(ticker)
+
+    should_fetch, reason = needs_fetch(log, start, force)
+
+    if should_fetch:
+        # download from the earliest date we care about, so a refresh
+        # also updates older rows we already had
+        fetch_start = start
+        if log is not None:
+            if log["start_date"] < start:
+                fetch_start = log["start_date"]
+
+        current_app.logger.info("fetching %s from %s (%s)", ticker.upper(), fetch_start, reason)
+        rows_written = update_prices(ticker, fetch_start, date.today())
+
+        # only remember the fetch if it worked, so a bad ticker isn't cached as "empty"
+        if rows_written > 0:
+            record_fetch(ticker, fetch_start)
+
+    return get_prices(ticker, start, end)
