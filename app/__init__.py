@@ -8,9 +8,9 @@ def create_app():
     app.config["DATABASE"] = os.path.join(app.instance_path, "main.db")
     os.makedirs(app.instance_path, exist_ok=True) # create instance folder
 
-    # auto close db
+    # db setup: auto close connections, create tables, add `flask init-db`
     from . import data
-    app.teardown_appcontext(data.close_db)
+    data.init_app(app)
 
     # register routes/pages
     from .routes import bp
